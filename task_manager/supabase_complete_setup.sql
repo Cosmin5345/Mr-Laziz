@@ -69,6 +69,7 @@ CREATE TABLE tasks (
   title TEXT NOT NULL,
   description TEXT,
   status TEXT NOT NULL CHECK (status IN ('Todo', 'InProgress', 'Done')) DEFAULT 'Todo',
+  assigned_to UUID REFERENCES users(id) ON DELETE SET NULL,
   created_by UUID REFERENCES users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -82,6 +83,7 @@ CREATE INDEX idx_group_members_user ON group_members(user_id);
 CREATE INDEX idx_group_members_group ON group_members(group_id);
 CREATE INDEX idx_tasks_group ON tasks(group_id);
 CREATE INDEX idx_tasks_status ON tasks(status);
+CREATE INDEX idx_tasks_assigned ON tasks(assigned_to);
 CREATE INDEX idx_groups_invite ON groups(invite_code);
 
 -- ================================================

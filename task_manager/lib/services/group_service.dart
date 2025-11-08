@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/group.dart';
 import '../models/group_member.dart';
+import '../models/user.dart' as app_user;
 import 'dart:math';
 
 class GroupService {
@@ -299,6 +300,81 @@ class GroupService {
       return GroupMember.fromJson(member).isLeader;
     } catch (e) {
       return false;
+    }
+  }
+
+  /// Obține ID-ul liderului unui grup
+  Future<String?> getGroupLeaderId(String groupId) async {
+    try {
+      final leader = await _supabase
+          .from('group_members')
+          .select('user_id')
+          .eq('group_id', groupId)
+          .eq('role', 'leader')
+          .maybeSingle();
+
+      return leader?['user_id'] as String?;
+    } catch (e) {
+      print('Error getting group leader: $e');
+      return null;
+    }
+  }
+
+  /// Obține userii dintr-un grup (pentru assignment), excluzând liderul
+  Future<List<app_user.User>> getGroupMembersForAssignment(
+    String groupId,
+  ) async {
+    try {
+      // Obține ID-ul liderului
+      final leaderId = await getGroupLeaderId(groupId);
+      print('=== ASSIGNMENT DEBUG ===');
+      print('Group ID: $groupId');
+      print('Leader ID: $leaderId');
+
+      // Obține toți membrii grupului (doar user_id-uri)
+      final membersResponse = await _supabase
+          .from('group_members')
+          .select('user_id')
+          .eq('group_id', groupId);
+
+      print('Members response: $membersResponse');
+
+      final memberIds = (membersResponse as List)
+          .map((m) => m['user_id'] as String)
+          .where((id) => id != leaderId) // Exclude liderul
+          .toList();
+
+      print('Member IDs (without leader): $memberIds');
+
+      if (memberIds.isEmpty) {
+        print('No members to assign (excluding leader)');
+        return [];
+      }
+
+      // Obține informațiile despre useri
+      final usersResponse = await _supabase
+          .from('users')
+          .select('id, email, full_name')
+          .inFilter('id', memberIds);
+
+      print('Users response: $usersResponse');
+
+      final users = (usersResponse as List).map((json) {
+        final user = app_user.User(
+          id: json['id'] as String,
+          email: json['email'] as String,
+          fullName: json['full_name'] as String?,
+        );
+        print('Member: ${user.email} (ID: ${user.id})');
+        return user;
+      }).toList();
+
+      print('Total assignable users: ${users.length}');
+      print('======================');
+      return users;
+    } catch (e) {
+      print('Error getting group members for assignment: $e');
+      throw Exception('Failed to load group members: $e');
     }
   }
 

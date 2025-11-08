@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/task.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
+import '../services/group_service.dart';
 
 class TaskDetailsScreen extends StatefulWidget {
   final Task task;
@@ -14,6 +15,7 @@ class TaskDetailsScreen extends StatefulWidget {
 
 class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   final ApiService _apiService = ApiService();
+  final GroupService _groupService = GroupService();
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
@@ -22,6 +24,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   List<User> _users = [];
   bool _isLoading = false;
   bool _isLoadingUsers = true;
+  bool _isLeader = false;
+  bool _isCheckingLeader = true;
 
   @override
   void initState() {
@@ -33,6 +37,24 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     _currentStatus = widget.task.status;
     _assignedUserId = widget.task.assignedTo; // Changed from assignedToUserId
     _loadUsers();
+    _checkIfLeader();
+  }
+
+  Future<void> _checkIfLeader() async {
+    if (widget.task.groupId == null) {
+      setState(() => _isCheckingLeader = false);
+      return;
+    }
+
+    try {
+      final isLeader = await _groupService.isGroupLeader(widget.task.groupId!);
+      setState(() {
+        _isLeader = isLeader;
+        _isCheckingLeader = false;
+      });
+    } catch (e) {
+      setState(() => _isCheckingLeader = false);
+    }
   }
 
   @override
@@ -43,12 +65,22 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   }
 
   Future<void> _loadUsers() async {
+    // Dacă taskul nu are groupId, nu încărcăm useri
+    if (widget.task.groupId == null) {
+      setState(() => _isLoadingUsers = false);
+      return;
+    }
+
     try {
-      final users = await _apiService.getUsers();
+      // Încarcă doar membrii grupului (fără lider)
+      final users = await _groupService.getGroupMembersForAssignment(
+        widget.task.groupId!,
+      );
       setState(() {
         _users = users;
         _isLoadingUsers = false;
       });
+      print('Loaded ${users.length} users for assignment');
     } catch (e) {
       setState(() => _isLoadingUsers = false);
       if (!mounted) return;
@@ -174,36 +206,66 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               },
             ),
             const SizedBox(height: 24),
-            const Text(
-              'Assign to',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            _isLoadingUsers
-                ? const Center(child: CircularProgressIndicator())
-                : DropdownButtonFormField<String?>(
-                    value: _assignedUserId,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: 'Select user',
-                    ),
-                    items: [
-                      const DropdownMenuItem<String?>(
-                        value: null,
-                        child: Text('Unassigned'),
+            // Afișează secțiunea de assign doar pentru lideri
+            if (_isLeader) ...[
+              const Text(
+                'Assign to',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              _isLoadingUsers
+                  ? const Center(child: CircularProgressIndicator())
+                  : DropdownButtonFormField<String?>(
+                      value: _assignedUserId,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: 'Select user',
                       ),
-                      ..._users.map((user) {
-                        return DropdownMenuItem<String?>(
-                          value: user.id,
-                          child: Text(user.username),
-                        );
-                      }),
-                    ],
-                    onChanged: (value) {
-                      _assignTask(value);
-                    },
-                  ),
-            const SizedBox(height: 24),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('Unassigned'),
+                        ),
+                        // Lista vine deja filtrată fără lider
+                        ..._users.map((user) {
+                          return DropdownMenuItem<String?>(
+                            value: user.id,
+                            child: Text(user.username),
+                          );
+                        }),
+                      ],
+                      onChanged: (value) {
+                        _assignTask(value);
+                      },
+                    ),
+              const SizedBox(height: 24),
+            ] else if (!_isCheckingLeader) ...[
+              // Mesaj pentru membrii care nu sunt lideri
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue.shade700),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Only group leaders can assign tasks',
+                        style: TextStyle(
+                          color: Colors.blue.shade900,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
             ElevatedButton(
               onPressed: _isLoading ? null : _updateTask,
               style: ElevatedButton.styleFrom(
