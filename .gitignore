@@ -1,0 +1,27 @@
+# Backend .NET
+backend/bin/
+backend/obj/
+backend/*.db
+backend/*.db-shm
+backend/*.db-wal
+
+# Flutter
+task_manager/.dart_tool/
+task_manager/.flutter-plugins
+task_manager/.flutter-plugins-dependencies
+task_manager/.packages
+task_manager/build/
+task_manager/.pub-cache/
+task_manager/.pub/
+task_manager/pubspec.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
