@@ -1,34 +1,47 @@
 class Task {
-  final int id;
+  final String id; // Schimbat din int în String pentru UUID
   final String title;
   final String? description;
   final String status;
-  final int createdByUserId;
+  final String? groupId; // UUID as String - ADĂUGAT
+  final String? createdBy; // UUID as String
   final String? createdByUsername;
-  final int? assignedToUserId;
+  final String? assignedTo; // UUID as String
   final String? assignedToUsername;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   Task({
     required this.id,
     required this.title,
     this.description,
     required this.status,
-    required this.createdByUserId,
+    this.groupId, // ADĂUGAT
+    this.createdBy,
     this.createdByUsername,
-    this.assignedToUserId,
+    this.assignedTo,
     this.assignedToUsername,
+    this.createdAt,
+    this.updatedAt,
   });
 
   factory Task.fromJson(Map<String, dynamic> json) {
     return Task(
-      id: json['id'] as int,
+      id: json['id'] as String, // Schimbat din int în String
       title: json['title'] as String,
       description: json['description'] as String?,
       status: json['status'] as String,
-      createdByUserId: json['createdByUserId'] as int,
-      createdByUsername: json['createdByUsername'] as String?,
-      assignedToUserId: json['assignedToUserId'] as int?,
-      assignedToUsername: json['assignedToUsername'] as String?,
+      groupId: json['group_id'] as String?, // ADĂUGAT
+      createdBy: json['created_by'] as String?,
+      createdByUsername: json['created_by_username'] as String?,
+      assignedTo: json['assigned_to'] as String?,
+      assignedToUsername: json['assigned_to_username'] as String?,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'] as String)
+          : null,
     );
   }
 
@@ -38,8 +51,11 @@ class Task {
       'title': title,
       'description': description,
       'status': status,
-      'createdByUserId': createdByUserId,
-      'assignedToUserId': assignedToUserId,
+      'group_id': groupId, // ADĂUGAT
+      'created_by': createdBy,
+      'assigned_to': assignedTo,
+      'created_at': createdAt?.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
     };
   }
 }

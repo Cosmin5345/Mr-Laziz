@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 
 class CreateTaskScreen extends StatefulWidget {
-  const CreateTaskScreen({super.key});
+  final String groupId;
+
+  const CreateTaskScreen({super.key, required this.groupId});
 
   @override
   State<CreateTaskScreen> createState() => _CreateTaskScreenState();
@@ -33,6 +35,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         _descriptionController.text.trim().isEmpty
             ? null
             : _descriptionController.text.trim(),
+        widget.groupId,
       );
 
       if (!mounted) return;
@@ -40,9 +43,9 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 

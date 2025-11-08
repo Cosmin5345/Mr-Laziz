@@ -18,7 +18,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
   late String _currentStatus;
-  int? _assignedUserId;
+  String? _assignedUserId; // Changed from int? to String?
   List<User> _users = [];
   bool _isLoading = false;
   bool _isLoadingUsers = true;
@@ -27,9 +27,11 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.task.title);
-    _descriptionController = TextEditingController(text: widget.task.description ?? '');
+    _descriptionController = TextEditingController(
+      text: widget.task.description ?? '',
+    );
     _currentStatus = widget.task.status;
-    _assignedUserId = widget.task.assignedToUserId;
+    _assignedUserId = widget.task.assignedTo; // Changed from assignedToUserId
     _loadUsers();
   }
 
@@ -50,9 +52,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     } catch (e) {
       setState(() => _isLoadingUsers = false);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading users: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error loading users: $e')));
     }
   }
 
@@ -78,9 +80,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -89,32 +91,34 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       await _apiService.updateTaskStatus(widget.task.id, newStatus);
       setState(() => _currentStatus = newStatus);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Status updated to $newStatus')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Status updated to $newStatus')));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
-  Future<void> _assignTask(int? userId) async {
+  Future<void> _assignTask(String? userId) async {
     try {
       await _apiService.assignTask(widget.task.id, userId);
       setState(() => _assignedUserId = userId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(userId == null ? 'Task unassigned' : 'Task assigned successfully'),
+          content: Text(
+            userId == null ? 'Task unassigned' : 'Task assigned successfully',
+          ),
         ),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -177,19 +181,19 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             const SizedBox(height: 8),
             _isLoadingUsers
                 ? const Center(child: CircularProgressIndicator())
-                : DropdownButtonFormField<int?>(
+                : DropdownButtonFormField<String?>(
                     value: _assignedUserId,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
                       hintText: 'Select user',
                     ),
                     items: [
-                      const DropdownMenuItem<int?>(
+                      const DropdownMenuItem<String?>(
                         value: null,
                         child: Text('Unassigned'),
                       ),
                       ..._users.map((user) {
-                        return DropdownMenuItem<int?>(
+                        return DropdownMenuItem<String?>(
                           value: user.id,
                           child: Text(user.username),
                         );

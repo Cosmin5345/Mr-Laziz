@@ -1,19 +1,24 @@
 import 'package:flutter/material.dart';
 import '../models/task.dart';
+import '../models/group.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import 'auth_screen.dart';
 import 'create_task_screen.dart';
 import 'task_details_screen.dart';
+import 'group_selection_screen.dart';
 
 class TaskBoardScreen extends StatefulWidget {
-  const TaskBoardScreen({super.key});
+  final Group group;
+
+  const TaskBoardScreen({super.key, required this.group});
 
   @override
   State<TaskBoardScreen> createState() => _TaskBoardScreenState();
 }
 
-class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProviderStateMixin {
+class _TaskBoardScreenState extends State<TaskBoardScreen>
+    with SingleTickerProviderStateMixin {
   final ApiService _apiService = ApiService();
   final AuthService _authService = AuthService();
   late TabController _tabController;
@@ -41,7 +46,7 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
     });
 
     try {
-      final tasks = await _apiService.getTasks();
+      final tasks = await _apiService.getTasksByGroup(widget.group.id);
       setState(() {
         _allTasks = tasks;
         _isLoading = false;
@@ -61,14 +66,22 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
   Future<void> _logout() async {
     await _authService.logout();
     if (!mounted) return;
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const AuthScreen()));
+  }
+
+  void _backToGroupSelection() {
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const AuthScreen()),
+      MaterialPageRoute(builder: (_) => const GroupSelectionScreen()),
     );
   }
 
   void _navigateToCreateTask() async {
     final result = await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const CreateTaskScreen()),
+      MaterialPageRoute(
+        builder: (_) => CreateTaskScreen(groupId: widget.group.id),
+      ),
     );
     if (result == true) {
       _loadTasks();
@@ -76,9 +89,9 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
   }
 
   void _navigateToTaskDetails(Task task) async {
-    final result = await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => TaskDetailsScreen(task: task)),
-    );
+    final result = await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => TaskDetailsScreen(task: task)));
     if (result == true) {
       _loadTasks();
     }
@@ -88,17 +101,16 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Task Board'),
+        title: Text(widget.group.name),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: _backToGroupSelection,
+          tooltip: 'Back to Groups',
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadTasks,
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _logout,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadTasks),
+          IconButton(icon: const Icon(Icons.logout), onPressed: _logout),
         ],
         bottom: TabBar(
           controller: _tabController,
@@ -112,27 +124,27 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text('Error: $_error'),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadTasks,
-                        child: const Text('Retry'),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Error: $_error'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _loadTasks,
+                    child: const Text('Retry'),
                   ),
-                )
-              : TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildTaskList(_getTasksByStatus('Todo')),
-                    _buildTaskList(_getTasksByStatus('InProgress')),
-                    _buildTaskList(_getTasksByStatus('Done')),
-                  ],
-                ),
+                ],
+              ),
+            )
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                _buildTaskList(_getTasksByStatus('Todo')),
+                _buildTaskList(_getTasksByStatus('InProgress')),
+                _buildTaskList(_getTasksByStatus('Done')),
+              ],
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: _navigateToCreateTask,
         child: const Icon(Icons.add),
@@ -142,9 +154,7 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
 
   Widget _buildTaskList(List<Task> tasks) {
     if (tasks.isEmpty) {
-      return const Center(
-        child: Text('No tasks in this category'),
-      );
+      return const Center(child: Text('No tasks in this category'));
     }
 
     return RefreshIndicator(

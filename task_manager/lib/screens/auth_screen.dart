@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-import 'task_board_screen.dart';
+import 'group_selection_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -49,7 +49,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
     if (result['success']) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const TaskBoardScreen()),
+        MaterialPageRoute(builder: (_) => const GroupSelectionScreen()),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

@@ -1,12 +1,8 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthService {
-  static const String baseUrl = 'http://localhost:5000'; // Windows/iOS
-  // For Android emulator use: 'http://10.0.2.2:5000'
-  // For physical device use your computer's IP: 'http://192.168.x.x:5000'
-  
+  final SupabaseClient _supabase = Supabase.instance.client;
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   static const String _tokenKey = 'jwt_token';
 
@@ -22,28 +18,45 @@ class AuthService {
     await _storage.delete(key: _tokenKey);
   }
 
-  Future<Map<String, dynamic>> register(String username, String password) async {
+  // Verifică dacă utilizatorul este autentificat
+  Future<bool> isAuthenticated() async {
+    final session = _supabase.auth.currentSession;
+    return session != null;
+  }
+
+  // Obține utilizatorul curent
+  User? getCurrentUser() {
+    return _supabase.auth.currentUser;
+  }
+
+  Future<Map<String, dynamic>> register(
+    String username,
+    String password,
+  ) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/auth/register'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'username': username,
-          'password': password,
-        }),
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw Exception('Connection timeout - Backend server might not be running');
-        },
+      // Supabase folosește email pentru autentificare
+      // Vom folosi username ca email (poți modifica dacă dorești email real)
+      final email = username.contains('@')
+          ? username
+          : '$username@taskboard.app';
+
+      final response = await _supabase.auth.signUp(
+        email: email,
+        password: password,
+        data: {'username': username},
       );
 
-      if (response.statusCode == 201) {
-        return {'success': true};
+      if (response.user != null) {
+        // Salvează token-ul
+        if (response.session?.accessToken != null) {
+          await saveToken(response.session!.accessToken);
+        }
+        return {'success': true, 'message': 'Registration successful'};
       } else {
-        final error = jsonDecode(response.body);
-        return {'success': false, 'message': error['message'] ?? 'Registration failed'};
+        return {'success': false, 'message': 'Registration failed'};
       }
+    } on AuthException catch (e) {
+      return {'success': false, 'message': e.message};
     } catch (e) {
       return {'success': false, 'message': 'Network error: $e'};
     }
@@ -51,33 +64,36 @@ class AuthService {
 
   Future<Map<String, dynamic>> login(String username, String password) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/auth/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'username': username,
-          'password': password,
-        }),
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw Exception('Connection timeout - Backend server might not be running');
-        },
+      // Convertește username în email dacă nu este deja
+      final email = username.contains('@')
+          ? username
+          : '$username@taskboard.app';
+
+      final response = await _supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
       );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        await saveToken(data['token']);
-        return {'success': true};
+      if (response.user != null && response.session != null) {
+        await saveToken(response.session!.accessToken);
+        return {'success': true, 'message': 'Login successful'};
       } else {
         return {'success': false, 'message': 'Invalid credentials'};
       }
+    } on AuthException catch (e) {
+      return {'success': false, 'message': e.message};
     } catch (e) {
       return {'success': false, 'message': 'Network error: $e'};
     }
   }
 
   Future<void> logout() async {
-    await deleteToken();
+    try {
+      await _supabase.auth.signOut();
+      await deleteToken();
+    } catch (e) {
+      // Log error dar continuă cu ștergerea token-ului local
+      await deleteToken();
+    }
   }
 }
