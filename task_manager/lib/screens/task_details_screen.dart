@@ -227,7 +227,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              value: _currentPriority,
+              initialValue: _currentPriority,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.flag),
@@ -290,7 +290,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               _isLoadingUsers
                   ? const Center(child: CircularProgressIndicator())
                   : DropdownButtonFormField<String?>(
-                      value: _users.any((u) => u.id == _assignedUserId)
+                      initialValue: _users.any((u) => u.id == _assignedUserId)
                           ? _assignedUserId
                           : null, // Dacă user-ul asignat nu e în listă, setează null
                       decoration: const InputDecoration(

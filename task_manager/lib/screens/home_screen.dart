@@ -60,8 +60,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
       setState(() {
         _userName = '$firstName $lastName'.trim();
-        if (_userName.isEmpty)
+        if (_userName.isEmpty) {
           _userName = authUser.email?.split('@')[0] ?? 'User';
+        }
 
         if (firstName.isNotEmpty && lastName.isNotEmpty) {
           _userInitials = '${firstName[0]}${lastName[0]}'.toUpperCase();

@@ -119,7 +119,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
             const SizedBox(height: 16),
             // Priority Dropdown
             DropdownButtonFormField<String>(
-              value: _selectedPriority,
+              initialValue: _selectedPriority,
               decoration: const InputDecoration(
                 labelText: 'Priority',
                 border: OutlineInputBorder(),

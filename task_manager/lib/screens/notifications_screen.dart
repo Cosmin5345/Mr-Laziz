@@ -248,7 +248,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   onChanged: (value) {
                     setState(() => _isDndMode = value);
                   },
-                  activeColor: AppColors.indigo600,
+                  activeThumbColor: AppColors.indigo600,
                 ),
               ],
             ),
